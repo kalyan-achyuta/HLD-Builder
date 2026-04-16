@@ -1,26 +1,9 @@
 const mongoose = require("mongoose");
 
 const diagramSchema = new mongoose.Schema({
-  nodes: [
-    {
-      id: String,
-      type: String,
-      position: {
-        x: Number,
-        y: Number,
-      },
-      data: {
-        label: String,
-      },
-    },
-  ],
-  edges: [
-    {
-      id: String,
-      source: String,
-      target: String,
-    },
-  ],
+  name: String,
+  nodes: Array,   // 🔥 IMPORTANT CHANGE
+  edges: Array,
 });
 
 module.exports = mongoose.model("Diagram", diagramSchema);

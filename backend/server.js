@@ -2,30 +2,35 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const Diagram = require("./models/Diagram");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  })
+);
+
 app.use(express.json());
 
+// 🔥 STRONG CONNECTION HANDLING
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+  })
   .then(() => console.log("MongoDB Connected ✅"))
-  .catch((err) => console.log(err));
-
-const diagramSchema = new mongoose.Schema({
-  name: String,
-  nodes: Array,
-  edges: Array,
-});
-
-const Diagram = mongoose.model("Diagram", diagramSchema);
+  .catch((err) => {
+    console.error("Mongo ERROR ❌:", err.message);
+    process.exit(1);
+  });
 
 app.get("/", (req, res) => {
   res.send("API running...");
 });
 
-app.post("/save", async (req, res) => {
+// CREATE
+app.post("/diagram", async (req, res) => {
   try {
     const { name, nodes, edges } = req.body;
 
@@ -34,19 +39,23 @@ app.post("/save", async (req, res) => {
 
     res.json({ message: "Saved successfully ✅" });
   } catch (err) {
+    console.error("SAVE ERROR:", err);
     res.status(500).json({ error: "Save failed" });
   }
 });
 
+// READ
 app.get("/diagrams", async (req, res) => {
   try {
     const data = await Diagram.find();
     res.json(data);
   } catch (err) {
+    console.error("FETCH ERROR:", err);
     res.status(500).json({ error: "Fetch failed" });
   }
 });
 
+// UPDATE
 app.put("/diagram/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,10 +65,12 @@ app.put("/diagram/:id", async (req, res) => {
 
     res.json({ message: "Updated successfully ✅" });
   } catch (err) {
+    console.error("UPDATE ERROR:", err);
     res.status(500).json({ error: "Update failed" });
   }
 });
 
+// DELETE
 app.delete("/diagram/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -68,6 +79,7 @@ app.delete("/diagram/:id", async (req, res) => {
 
     res.json({ message: "Deleted successfully 🗑️" });
   } catch (err) {
+    console.error("DELETE ERROR:", err);
     res.status(500).json({ error: "Delete failed" });
   }
 });

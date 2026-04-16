@@ -16,8 +16,9 @@ const nodeTypes = {
 
 function App() {
   const [diagramName, setDiagramName] = useState("");
-  const [diagrams, setDiagrams] = useState([]);
+  const [diagrams, setDiagrams] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const [nodes, setNodes, onNodesChange] = useNodesState([
     {
       id: "1",
@@ -38,26 +39,32 @@ function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
 
+  // ✅ SAFE FETCH
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch("http://localhost:5000/diagrams");
-      const data = await res.json();
+      try {
+        const res = await fetch("http://localhost:5000/diagrams");
+        const data = await res.json();
 
-      setDiagrams(data);
+        setDiagrams(data);
 
-      if (data.length > 0) {
-        const latest = data[data.length - 1];
-        setNodes(latest.nodes || []);
-        setEdges(latest.edges || []);
+        if (data.length > 0) {
+          const latest = data[data.length - 1];
+          setNodes(latest.nodes || []);
+          setEdges(latest.edges || []);
+        }
+      } catch (err) {
+        console.error("Fetch failed", err);
       }
     };
 
     fetchData();
   }, []);
 
+  // ✅ UNIQUE NODE ID FIX
   const addNode = (type: string) => {
     const newNode = {
-      id: (nodes.length + 1).toString(),
+      id: Date.now().toString(),
       type: "custom",
       position: {
         x: Math.random() * 400,
@@ -155,11 +162,12 @@ function App() {
     }));
   };
 
+  // ✅ API FIX ONLY
   const handleSave = async () => {
     try {
       const url = selectedId
         ? `http://localhost:5000/diagram/${selectedId}`
-        : "http://localhost:5000/save";
+        : "http://localhost:5000/diagram";
 
       const method = selectedId ? "PUT" : "POST";
 
@@ -176,7 +184,7 @@ function App() {
       });
 
       const data = await res.json();
-      alert(data.message);
+      alert(data.message || "Saved");
 
       const refresh = await fetch("http://localhost:5000/diagrams");
       const updated = await refresh.json();
@@ -229,41 +237,43 @@ function App() {
         <div className="mt-4">
           <h3 className="text-sm font-bold mb-2">My Diagrams</h3>
 
-          {diagrams.map((d: any) => (
-            <div
-              key={d._id}
-              className="p-2 mb-1 bg-gray-700 rounded flex justify-between items-center"
-            >
-              <span
-                className="cursor-pointer"
-                onClick={() => {
-                  setNodes(d.nodes || []);
-                  setEdges(d.edges || []);
-                  setDiagramName(d.name || "");
-                  setSelectedId(d._id);
-                }}
+          {Array.isArray(diagrams) &&
+            diagrams.map((d: any) => (
+              <div
+                key={d._id}
+                className="p-2 mb-1 bg-gray-700 rounded flex justify-between items-center"
               >
-                {d.name}
-              </span>
+                <span
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setNodes(d.nodes || []);
+                    setEdges(d.edges || []);
+                    setDiagramName(d.name || "");
+                    setSelectedId(d._id);
+                  }}
+                >
+                  {d.name}
+                </span>
 
-              <button
-                className="text-red-400 ml-2"
-                onClick={async () => {
-                  await fetch(`http://localhost:5000/diagram/${d._id}`, {
-                    method: "DELETE",
-                  });
+                <button
+                  className="text-red-400 ml-2"
+                  onClick={async () => {
+                    await fetch(`http://localhost:5000/diagram/${d._id}`, {
+                      method: "DELETE",
+                    });
 
-                  const res = await fetch("http://localhost:5000/diagrams");
-                  const data = await res.json();
-                  setDiagrams(data);
-                }}
-              >
-                ❌
-              </button>
-            </div>
-          ))}
+                    const res = await fetch("http://localhost:5000/diagrams");
+                    const data = await res.json();
+                    setDiagrams(data);
+                  }}
+                >
+                  ❌
+                </button>
+              </div>
+            ))}
         </div>
       </div>
+
       <div className="flex-1 bg-gray-100 relative">
         <ReactFlow
           nodes={nodes}
